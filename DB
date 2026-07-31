@@ -1,0 +1,61 @@
+If you're inside the PostgreSQL prompt (psql), after running:
+
+CREATE DATABASE vegetable_db;
+
+CREATE USER veguser
+WITH PASSWORD 'StrongPassword';
+
+GRANT ALL PRIVILEGES
+ON DATABASE vegetable_db
+TO veguser;
+
+you don't need to "save" anything manually. PostgreSQL executes each command immediately when it ends with a semicolon (;).
+
+To exit psql
+
+Type:
+
+\q
+
+and press Enter.
+
+Example
+ubuntu@ip-10-0-1-100:~$ sudo -u postgres psql
+postgres=# CREATE DATABASE vegetable_db;
+CREATE DATABASE
+
+postgres=# CREATE USER veguser
+postgres-# WITH PASSWORD 'StrongPassword';
+CREATE ROLE
+
+postgres=# GRANT ALL PRIVILEGES
+postgres-# ON DATABASE vegetable_db
+postgres-# TO veguser;
+GRANT
+
+postgres=# \q
+
+You'll return to the Linux shell:
+
+ubuntu@ip-10-0-1-100:~$
+Verify the database and user
+
+Log back into PostgreSQL:
+
+sudo -u postgres psql
+
+List databases:
+
+\l
+
+You should see:
+
+vegetable_db
+
+List users (roles):
+
+\du
+
+You should see:
+
+veguser
