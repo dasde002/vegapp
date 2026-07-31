@@ -1,0 +1,150 @@
+vegetable-backend
+│
+├── src
+│   ├── main
+│   │   ├── java
+│   │   │     └── com
+│   │   │          └── vegetablemarket
+│   │   │                └── VegetableBackendApplication.java
+│   │   │
+│   │   └── resources
+│   │         ├── application.properties
+│   │
+│   └── test
+│
+├── pom.xml
+│
+└── mvnw
+
+Add JWT Dependency
+
+Open pom.xml
+
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-api</artifactId>
+    <version>0.12.7</version>
+</dependency>
+
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.12.7</version>
+    <scope>runtime</scope>
+</dependency>
+
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.12.7</version>
+    <scope>runtime</scope>
+</dependency>
+
+mvn clean install
+
+Step 7: Configure PostgreSQL
+
+Step 7: Configure PostgreSQL
+
+Open:
+
+src/main/resources/application.properties
+
+Replace its contents with:
+
+spring.application.name=vegetable-backend
+
+server.port=8080
+
+spring.datasource.url=jdbc:postgresql://localhost:5432/vegetable_db
+spring.datasource.username=veguser
+spring.datasource.password=StrongPassword
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+
+If PostgreSQL is on another server, replace localhost with its IP or hostname.
+
+Step 8: Create Packages
+
+Inside:
+
+src/main/java/com/vegetablemarket
+
+Create:
+
+config
+
+controller
+
+dto
+
+entity
+
+exception
+
+repository
+
+security
+
+service
+
+util
+
+Your structure becomes:
+
+src
+└── main
+    └── java
+        └── com.vegetablemarket
+             │
+             ├── config
+             ├── controller
+             ├── dto
+             ├── entity
+             ├── exception
+             ├── repository
+             ├── security
+             ├── service
+             ├── util
+             │
+             └── VegetableBackendApplication.java
+Step 9: Run the Project
+
+Run:
+
+mvn spring-boot:run
+
+or click Run in your IDE.
+
+Expected output:
+
+Started VegetableBackendApplication
+Step 10: Verify
+
+Open your browser:
+
+http://localhost:8080
+
+You'll likely see a 404 page, which is expected because no controllers have been created yet.
+
+Step 11: Add Swagger
+
+Add this dependency to pom.xml:
+
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>2.8.9</version>
+</dependency>
+
+Run:
+
+mvn clean install
+
+Then start the application again and open:
+
+http://localhost:8080/swagger-ui/index.html
