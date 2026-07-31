@@ -1,0 +1,106 @@
+Week 1 – AWS Infrastructure
+Step 1: Create AWS Account
+
+If you don't already have one.
+
+Step 2: Create VPC
+VPC CIDR
+
+10.0.0.0/16
+Step 3: Create Public Subnet
+10.0.1.0/24
+Step 4: Create Internet Gateway
+
+Attach it to the VPC.
+
+Step 5: Create Route Table
+0.0.0.0/0
+
+↓
+
+Internet Gateway
+
+Associate the public subnet.
+
+Step 6: Security Group
+
+Allow:
+
+Port	Purpose
+22	SSH
+80	HTTP
+443	HTTPS
+8080	Spring Boot (testing only)
+5432	PostgreSQL (only from trusted IPs or localhost; do not expose publicly in production)
+6379	Redis (keep private; do not expose publicly)
+Step 7: Launch EC2
+
+Ubuntu 24.04 LTS
+
+t3.small
+
+2 vCPU
+
+2 GB RAM
+
+30 GB gp3
+Step 8
+
+Allocate Elastic IP.
+
+Step 9
+
+SSH into EC2
+
+ssh -i vegetable.pem ubuntu@PUBLIC_IP
+Week 2 – Install Software
+
+Update
+
+sudo apt update
+sudo apt upgrade -y
+Install Java
+sudo apt install openjdk-21-jdk -y
+
+Verify
+
+java -version
+Install PostgreSQL
+sudo apt install postgresql postgresql-contrib -y
+
+Enable
+
+sudo systemctl enable postgresql
+sudo systemctl start postgresql
+
+Create database
+
+sudo -u postgres psql
+CREATE DATABASE vegetable_db;
+
+CREATE USER veguser
+WITH PASSWORD 'StrongPassword';
+
+GRANT ALL PRIVILEGES
+ON DATABASE vegetable_db
+TO veguser;
+Install Redis
+sudo apt install redis-server -y
+
+Enable
+
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+Install Nginx
+sudo apt install nginx -y
+
+Enable
+
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+Test
+
+http://PUBLIC_IP
+
+You should see the Nginx welcome page.
