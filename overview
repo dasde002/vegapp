@@ -1,0 +1,178 @@
+High-Level Architecture
+
+                     Mobile App (Android/iOS)
+                              |
+                    React Native / Flutter
+                              |
+--------------------- API Gateway ----------------------
+             |                 |               |
+      Authentication      Product API      Order API
+             |                 |               |
+      User Service      Inventory Service   Payment Service
+             |                 |               |
+             -----------------------------------
+                              |
+                        PostgreSQL Database
+                              |
+               Redis Cache / Message Queue
+                              |
+          Notification Service (SMS/WhatsApp)
+                              |
+              AI Recommendation Service
+                              |
+                 Admin Dashboard (React)
+                              |
+                     Cloud Storage (Images)
+                              |
+                  Monitoring & Logging
+
+
+Technology Stack
+Mobile App
+
+I recommend Flutter.
+
+Why?
+
+One codebase
+Android
+iPhone
+Web (optional)
+Excellent UI
+Large community
+
+Alternative
+
+React Native
+Backend
+
+Use
+
+Java + Spring Boot
+
+or
+
+Python + FastAPI
+
+Since you already have Linux, DevOps, Kubernetes, AWS experience, I recommend
+
+Spring Boot
+
+because
+
+enterprise grade
+scalable
+secure
+supports microservices
+excellent documentation
+Database
+
+PostgreSQL
+
+Why
+
+ACID compliant
+excellent performance
+GIS support (location-based searches)
+JSON support
+Cache
+
+Redis
+
+Use for
+
+OTP
+Sessions
+Product cache
+Popular searches
+Storage
+
+Cloud Object Storage
+
+Examples
+
+AWS S3
+OCI Object Storage
+Azure Blob
+
+Store
+
+Product images
+Bills
+Videos
+Authentication
+
+JWT
+
+Features
+
+Login
+Google Login
+Phone OTP
+Seller Login
+Admin Login
+Payments
+
+For India
+
+Razorpay
+PhonePe
+Paytm
+UPI
+Notifications
+WhatsApp
+SMS
+Push Notifications
+Email
+Maps
+
+Google Maps
+
+Use for
+
+Delivery tracking
+Nearby vegetable sellers
+Customer address
+
+
+Microservices
+
+Authentication Service
+
+Seller Service
+
+Customer Service
+
+Product Service
+
+Inventory Service
+
+Order Service
+
+Payment Service
+
+Delivery Service
+
+Notification Service
+
+Review Service
+
+Coupon Service
+
+Recommendation Service
+
+Admin Service
+
+Frontend
+
+Customer App
+
+Flutter
+
+Seller App
+
+Flutter
+
+Admin Portal
+
+React
