@@ -148,3 +148,19 @@ mvn clean install
 Then start the application again and open:
 
 http://localhost:8080/swagger-ui/index.html
+
+
+Why do we need these packages?
+
+Each package has a specific responsibility:
+
+Package	Purpose	Example
+controller	REST API endpoints	ProductController.java
+service	Business logic	ProductService.java
+repository	Database access	ProductRepository.java
+entity	Database table mappings	Product.java
+dto	Request/response objects	LoginRequest.java
+security	JWT, authentication	JwtFilter.java
+config	Application configuration	SecurityConfig.java
+exception	Custom exception handling	GlobalExceptionHandler.java
+util	Utility/helper classes	JwtUtil.java
