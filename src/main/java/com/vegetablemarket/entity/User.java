@@ -21,7 +21,8 @@ public class User {
     @Column(nullable = false, unique = true)
     private String phone;
 
-    @Column(nullable = false)
+    
+    @JsonIgnore
     private String password;
 
     @Column(nullable = false)
