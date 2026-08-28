@@ -1,0 +1,30 @@
+package com.vegetablemarket.service;
+
+import com.vegetablemarket.entity.User;
+import com.vegetablemarket.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    // Register a new user
+    public User registerUser(User user) {
+
+        // Check if email already exists
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        // Check if phone number already exists
+        if (userRepository.findByPhone(user.getPhone()).isPresent()) {
+            throw new RuntimeException("Phone number already exists");
+        }
+
+        // Save user
+        return userRepository.save(user);
+    }
+}
