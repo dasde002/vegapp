@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 
@@ -36,16 +37,48 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
 
-                // Login and registration do not require JWT
-                .requestMatchers(
-                    "/api/auth/**"
-                ).permitAll()
+                // Login and registration
+                .requestMatchers("/api/auth/**")
+                .permitAll()
 
-                // Everything else requires JWT
+                // Product read operations
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/products",
+                    "/api/products/*"
+                )
+                .hasAnyRole("CUSTOMER", "SELLER")
+
+                // Seller's own products
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/products/my-products"
+                )
+                .hasRole("SELLER")
+
+                // Seller product management
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/products"
+                )
+                .hasRole("SELLER")
+
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/products/*"
+                )
+                .hasRole("SELLER")
+
+                .requestMatchers(
+                    HttpMethod.DELETE,
+                    "/api/products/*"
+                )
+                .hasRole("SELLER")
+
+                // Everything else requires authentication
                 .anyRequest().authenticated()
             )
 
-            // Add JWT filter
             .addFilterBefore(
                 jwtAuthenticationFilter,
                 UsernamePasswordAuthenticationFilter.class
