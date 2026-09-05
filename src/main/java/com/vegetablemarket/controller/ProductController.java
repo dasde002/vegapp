@@ -64,7 +64,7 @@ public class ProductController {
     public List<ProductResponse> getMyProducts(
             Authentication authentication) {
 
-        String email = authentication.getName();
+            String email = authentication.getName();
 
         return productService.getMyProducts(email);
     }
