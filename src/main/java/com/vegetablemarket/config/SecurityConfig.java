@@ -94,13 +94,4 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
     
-    @GetMapping("/my-products")
-    public List<ProductResponse> getMyProducts(
-           Authentication authentication) {
-
-         String email = authentication.getName();
-
-         return productService.getMyProducts(email);
-    }
-
 }
