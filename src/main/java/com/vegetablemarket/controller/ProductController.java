@@ -60,7 +60,7 @@ public class ProductController {
      *
      * GET /api/products/seller/my-products
      */
-    @GetMapping("/my-products")
+    @GetMapping("/seller/my-products")
     public List<ProductResponse> getMyProducts(
             Authentication authentication) {
 
