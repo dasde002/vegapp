@@ -41,7 +41,14 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**")
                 .permitAll()
 
-                // Product read operations
+                // Seller's own products
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/products/seller/my-products"
+                )
+                .hasRole("SELLER")
+
+                // Customers and sellers can view products
                 .requestMatchers(
                     HttpMethod.GET,
                     "/api/products",
@@ -49,26 +56,21 @@ public class SecurityConfig {
                 )
                 .hasAnyRole("CUSTOMER", "SELLER")
 
-                // Seller's own products
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/products/my-products"
-                )
-                .hasRole("SELLER")
-
-                // Seller product management
+                // Only sellers can create products
                 .requestMatchers(
                     HttpMethod.POST,
                     "/api/products"
                 )
                 .hasRole("SELLER")
 
+                // Only sellers can update products
                 .requestMatchers(
                     HttpMethod.PUT,
                     "/api/products/*"
                 )
                 .hasRole("SELLER")
 
+                // Only sellers can delete products
                 .requestMatchers(
                     HttpMethod.DELETE,
                     "/api/products/*"
@@ -93,5 +95,4 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    
 }
