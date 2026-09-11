@@ -220,6 +220,221 @@ public Order cancelOrder(String email, Long orderId) {
     return orderRepository.save(order);
     }  
 
+```java
+// ============================================================
+// SELLER ORDER MANAGEMENT
+// ============================================================
+
+public List<com.vegetablemarket.dto.SellerOrderResponse> getSellerOrders(
+        String email) {
+
+    User seller = getSeller(email);
+
+    List<Order> orders =
+            orderRepository.findOrdersBySellerId(seller.getId());
+
+    return orders.stream()
+            .map(order -> toSellerOrderResponse(order, seller.getId()))
+            .toList();
+}
+
+
+public com.vegetablemarket.dto.SellerOrderResponse getSellerOrder(
+        String email,
+        Long orderId) {
+
+    User seller = getSeller(email);
+
+    Order order = orderRepository.findById(orderId)
+            .orElseThrow(() ->
+                    new RuntimeException("Order not found"));
+
+    // Make sure this seller has at least one product in the order
+    boolean sellerOwnsItem = order.getItems()
+            .stream()
+            .anyMatch(item ->
+                    item.getProduct()
+                            .getSellerId()
+                            .equals(seller.getId()));
+
+    if (!sellerOwnsItem) {
+        throw new RuntimeException(
+                "You are not authorized to access this order");
+    }
+
+    return toSellerOrderResponse(order, seller.getId());
+}
+
+
+@Transactional
+public com.vegetablemarket.dto.SellerOrderResponse updateSellerOrderStatus(
+        String email,
+        Long orderId,
+        OrderStatus newStatus) {
+
+    User seller = getSeller(email);
+
+    Order order = orderRepository.findById(orderId)
+            .orElseThrow(() ->
+                    new RuntimeException("Order not found"));
+
+    // Check whether seller has products in this order
+    boolean sellerOwnsItem = order.getItems()
+            .stream()
+            .anyMatch(item ->
+                    item.getProduct()
+                            .getSellerId()
+                            .equals(seller.getId()));
+
+    if (!sellerOwnsItem) {
+        throw new RuntimeException(
+                "You are not authorized to update this order");
+    }
+
+    // Because Order currently has ONE status for the entire order,
+    // don't allow one seller to change another seller's fulfillment.
+    boolean allItemsBelongToSeller = order.getItems()
+            .stream()
+            .allMatch(item ->
+                    item.getProduct()
+                            .getSellerId()
+                            .equals(seller.getId()));
+
+    if (!allItemsBelongToSeller) {
+        throw new RuntimeException(
+                "This order contains products from multiple sellers. "
+                + "Seller-specific status management is not available "
+                + "for this order yet.");
+    }
+
+    validateSellerStatusChange(
+            order.getStatus(),
+            newStatus);
+
+    order.setStatus(newStatus);
+
+    Order savedOrder = orderRepository.save(order);
+
+    return toSellerOrderResponse(
+            savedOrder,
+            seller.getId());
+}
+
+
+private User getSeller(String email) {
+
+    User seller = userRepository.findByEmail(email)
+            .orElseThrow(() ->
+                    new RuntimeException("User not found"));
+
+    if (!"SELLER".equalsIgnoreCase(seller.getRole())) {
+        throw new RuntimeException(
+                "Only sellers can access seller orders");
+    }
+
+    return seller;
+}
+
+
+private void validateSellerStatusChange(
+        OrderStatus currentStatus,
+        OrderStatus newStatus) {
+
+    if (currentStatus == OrderStatus.CANCELLED) {
+        throw new RuntimeException(
+                "Cancelled orders cannot be updated");
+    }
+
+    if (currentStatus == OrderStatus.DELIVERED) {
+        throw new RuntimeException(
+                "Delivered orders cannot be updated");
+    }
+
+    if (newStatus == OrderStatus.PLACED) {
+        throw new RuntimeException(
+                "Seller cannot move an order back to PLACED");
+    }
+
+    if (newStatus == OrderStatus.CANCELLED) {
+        throw new RuntimeException(
+                "Seller cannot cancel an order using this API");
+    }
+
+    if (currentStatus == OrderStatus.PLACED
+            && newStatus != OrderStatus.CONFIRMED) {
+
+        throw new RuntimeException(
+                "PLACED orders can only be moved to CONFIRMED");
+    }
+
+    if (currentStatus == OrderStatus.CONFIRMED
+            && newStatus != OrderStatus.SHIPPED) {
+
+        throw new RuntimeException(
+                "CONFIRMED orders can only be moved to SHIPPED");
+    }
+
+    if (currentStatus == OrderStatus.SHIPPED
+            && newStatus != OrderStatus.DELIVERED) {
+
+        throw new RuntimeException(
+                "SHIPPED orders can only be moved to DELIVERED");
+    }
+}
+
+
+private com.vegetablemarket.dto.SellerOrderResponse
+toSellerOrderResponse(
+        Order order,
+        Long sellerId) {
+
+    com.vegetablemarket.dto.SellerOrderResponse response =
+            new com.vegetablemarket.dto.SellerOrderResponse();
+
+    response.setOrderId(order.getId());
+    response.setCustomerId(order.getUser().getId());
+    response.setCustomerName(order.getUser().getFullName());
+    response.setCustomerEmail(order.getUser().getEmail());
+    response.setStatus(order.getStatus());
+    response.setCreatedAt(order.getCreatedAt());
+
+    List<com.vegetablemarket.dto.SellerOrderItemResponse> items =
+            order.getItems()
+                    .stream()
+                    .filter(item ->
+                            item.getProduct()
+                                    .getSellerId()
+                                    .equals(sellerId))
+                    .map(item -> {
+
+                        com.vegetablemarket.dto.SellerOrderItemResponse itemResponse =
+                                new com.vegetablemarket.dto.SellerOrderItemResponse();
+
+                        itemResponse.setOrderItemId(item.getId());
+                        itemResponse.setProductId(
+                                item.getProduct().getId());
+                        itemResponse.setProductName(
+                                item.getProduct().getName());
+                        itemResponse.setQuantity(
+                                item.getQuantity());
+                        itemResponse.setPrice(
+                                item.getPrice());
+
+                        return itemResponse;
+                    })
+                    .toList();
+
+    response.setItems(items);
+
+    double sellerTotal = items.stream()
+            .mapToDouble(item ->
+                    item.getPrice() * item.getQuantity())
+            .sum();
+
+    response.setSellerOrderTotal(sellerTotal);
+
+    return response;
+}
 }
     
 
