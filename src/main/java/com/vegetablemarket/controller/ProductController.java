@@ -58,7 +58,7 @@ public class ProductController {
     /**
      * Seller views their own products
      *
-     * GET /api/products/my-products
+     * GET /api/products/seller/my-products
      */
     @GetMapping("/my-products")
     public List<ProductResponse> getMyProducts(
