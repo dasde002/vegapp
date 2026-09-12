@@ -1,8 +1,10 @@
 package com.vegetablemarket.service;
 
+import com.vegetablemarket.dto.ChangePasswordRequest;
 import com.vegetablemarket.dto.LoginRequest;
 import com.vegetablemarket.dto.LoginResponse;
 import com.vegetablemarket.dto.RegisterRequest;
+import com.vegetablemarket.dto.UpdateProfileRequest;
 import com.vegetablemarket.entity.User;
 import com.vegetablemarket.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,5 +80,40 @@ public class UserService {
                 token,
                 "Login Successful"
         );
+    }
+
+    public User getCurrentUser(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    public User updateProfile(String email, UpdateProfileRequest request) {
+        User user = getCurrentUser(email);
+
+        if (userRepository.findByPhone(request.getPhone())
+                .filter(existing -> !existing.getId().equals(user.getId()))
+                .isPresent()) {
+            throw new RuntimeException("Phone number already exists");
+        }
+
+        user.setFullName(request.getFullName().trim());
+        user.setPhone(request.getPhone().trim());
+
+        return userRepository.save(user);
+    }
+
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = getCurrentUser(email);
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new RuntimeException("New password must be different from the current password");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }
