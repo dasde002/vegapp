@@ -1,10 +1,13 @@
 package com.vegetablemarket.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -13,42 +16,40 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidationException(
-            MethodArgumentNotValidException ex) {
-
+    public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new LinkedHashMap<>();
-
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errors.put(error.getField(), error.getDefaultMessage()));
-
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("message", "Validation failed");
         body.put("errors", errors);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(body);
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "message", "Invalid value for parameter: " + ex.getName()));
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, String>> handleOptimisticLocking() {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "message", "The product was changed by another request. Please refresh and try again."));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrity() {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "message", "The request conflicts with existing data."));
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, String>> handleRuntimeException(
-            RuntimeException ex) {
-
-        String message = ex.getMessage() == null
-                ? "Request failed"
-                : ex.getMessage();
-
+    public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
+        String message = ex.getMessage() == null ? "Request failed" : ex.getMessage();
         HttpStatus status = HttpStatus.BAD_REQUEST;
-
-        if (message.contains("not found")) {
-            status = HttpStatus.NOT_FOUND;
-        } else if (message.contains("Unauthorized")
-                || message.contains("not authorized")) {
-            status = HttpStatus.FORBIDDEN;
-        }
-
-        return ResponseEntity
-                .status(status)
-                .body(Map.of("message", message));
+        if (message.contains("not found")) status = HttpStatus.NOT_FOUND;
+        else if (message.contains("Unauthorized") || message.contains("not authorized")) status = HttpStatus.FORBIDDEN;
+        return ResponseEntity.status(status).body(Map.of("message", message));
     }
 }
