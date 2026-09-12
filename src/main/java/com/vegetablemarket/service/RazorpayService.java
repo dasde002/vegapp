@@ -133,10 +133,24 @@ public class RazorpayService {
         requireConfigured();
 
         User user = findUser(email);
-        Payment payment = paymentRepository.findByRazorpayOrderId(request.getRazorpayOrderId())
-                .orElseThrow(() -> new RuntimeException("Razorpay order not found"));
+
+        // Find the local payment by our own order relationship rather than trusting
+        // the browser-supplied Razorpay order ID as the source of truth.
+        Payment payment = paymentRepository.findByOrderId(request.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Payment not found for order"));
+
         Order order = payment.getOrder();
         validateOrderAccess(user, order);
+
+        String storedRazorpayOrderId = payment.getRazorpayOrderId();
+        if (storedRazorpayOrderId == null || storedRazorpayOrderId.isBlank()) {
+            throw new RuntimeException("Razorpay order ID is missing for this payment");
+        }
+
+        // The order ID returned by Checkout must match the server-side stored ID.
+        if (!storedRazorpayOrderId.equals(request.getRazorpayOrderId())) {
+            throw new RuntimeException("Razorpay order ID mismatch");
+        }
 
         if (payment.getStatus() == PaymentStatus.SUCCESS) {
             if (request.getRazorpayPaymentId().equals(payment.getTransactionId())) {
@@ -145,7 +159,9 @@ public class RazorpayService {
             throw new RuntimeException("Payment is already completed");
         }
 
-        if (!isValidSignature(request.getRazorpayOrderId(),
+        // Razorpay requires HMAC verification over the server-stored order ID and
+        // the payment ID returned by Checkout.
+        if (!isValidSignature(storedRazorpayOrderId,
                 request.getRazorpayPaymentId(), request.getRazorpaySignature())) {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setUpdatedAt(LocalDateTime.now());
