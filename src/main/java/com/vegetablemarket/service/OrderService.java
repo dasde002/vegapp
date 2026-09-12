@@ -79,12 +79,12 @@ public class OrderService {
 
     public List<Order> getMyOrders(String email) {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
-        return orderRepository.findByUser(user);
+        return orderRepository.findByUserWithItems(user);
     }
 
     public Order getOrder(String email, Long orderId) {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        Order order = orderRepository.findByIdWithItems(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
         if (!order.getUser().getId().equals(user.getId())) throw new RuntimeException("Unauthorized access to order");
         return order;
     }
@@ -92,7 +92,7 @@ public class OrderService {
     @Transactional
     public Order cancelOrder(String email, Long orderId) {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        Order order = orderRepository.findByIdWithItems(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
         if (!order.getUser().getId().equals(user.getId())) throw new RuntimeException("Unauthorized access to order");
         if (order.getStatus() == OrderStatus.CANCELLED) throw new RuntimeException("Order is already cancelled");
         if (order.getStatus() == OrderStatus.SHIPPED || order.getStatus() == OrderStatus.DELIVERED) throw new RuntimeException("Order cannot be cancelled at this stage");
@@ -114,7 +114,7 @@ public class OrderService {
 
     public com.vegetablemarket.dto.SellerOrderResponse getSellerOrder(String email, Long orderId) {
         User seller = getSeller(email);
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        Order order = orderRepository.findByIdWithItems(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
         if (order.getItems().stream().noneMatch(item -> item.getProduct().getSellerId().equals(seller.getId()))) throw new RuntimeException("You are not authorized to access this order");
         return toSellerOrderResponse(order, seller.getId());
     }
@@ -122,7 +122,7 @@ public class OrderService {
     @Transactional
     public com.vegetablemarket.dto.SellerOrderResponse updateSellerOrderStatus(String email, Long orderId, OrderStatus newStatus) {
         User seller = getSeller(email);
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        Order order = orderRepository.findByIdWithItems(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
         if (order.getItems().stream().noneMatch(item -> item.getProduct().getSellerId().equals(seller.getId()))) throw new RuntimeException("You are not authorized to update this order");
         if (order.getItems().stream().anyMatch(item -> !item.getProduct().getSellerId().equals(seller.getId()))) throw new RuntimeException("This order contains products from multiple sellers. Seller-specific status management is not available for this order yet.");
         validateSellerStatusChange(order.getStatus(), newStatus);
