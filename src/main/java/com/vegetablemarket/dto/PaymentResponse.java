@@ -13,4 +13,5 @@ public class PaymentResponse {
     private PaymentStatus status;
     private String provider;
     private String transactionId;
+    private String razorpayOrderId;
 }
