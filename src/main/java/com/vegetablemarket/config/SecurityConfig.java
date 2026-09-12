@@ -37,6 +37,10 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
 
+                // Public frontend payment page
+                .requestMatchers("/payment.html", "/favicon.ico")
+                .permitAll()
+
                 // Login and registration
                 .requestMatchers("/api/auth/**")
                 .permitAll()
