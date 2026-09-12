@@ -30,6 +30,20 @@ public class Order {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    // Shipping address snapshot.
+    // These fields intentionally remain nullable so existing orders
+    // already stored in the database continue to work.
+    private String shippingFullName;
+    private String shippingPhone;
+
+    @Column(length = 500)
+    private String shippingAddressLine;
+
+    private String shippingCity;
+    private String shippingState;
+    private String shippingPostalCode;
+    private String shippingLandmark;
+
     @OneToMany(
             mappedBy = "order",
             cascade = CascadeType.ALL,
