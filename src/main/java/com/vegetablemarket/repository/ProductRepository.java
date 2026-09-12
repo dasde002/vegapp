@@ -19,6 +19,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByActiveTrue();
 
+    @Query("SELECT DISTINCT p.category FROM Product p WHERE p.active = true AND p.category IS NOT NULL AND p.category <> '' ORDER BY p.category")
+    List<String> findActiveCategories();
+
     @Modifying
     @Transactional
     @Query(value = "UPDATE products SET active = COALESCE(active, true), version = COALESCE(version, 0)", nativeQuery = true)
