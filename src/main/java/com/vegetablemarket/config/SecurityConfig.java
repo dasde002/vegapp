@@ -27,6 +27,8 @@ public class SecurityConfig {
                 .requestMatchers("/payment.html", "/favicon.ico").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
 
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
                 .requestMatchers(HttpMethod.GET, "/api/products/seller/my-products").hasRole("SELLER")
                 .requestMatchers(HttpMethod.POST, "/api/products").hasRole("SELLER")
                 .requestMatchers(HttpMethod.PUT, "/api/products/*").hasRole("SELLER")
