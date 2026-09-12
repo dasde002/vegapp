@@ -4,6 +4,8 @@ import com.vegetablemarket.dto.PaymentResponse;
 import com.vegetablemarket.dto.RazorpayOrderResponse;
 import com.vegetablemarket.dto.RazorpayVerifyRequest;
 import com.vegetablemarket.entity.Order;
+import com.vegetablemarket.entity.OrderItem;
+import com.vegetablemarket.entity.OrderItemStatus;
 import com.vegetablemarket.entity.OrderStatus;
 import com.vegetablemarket.entity.Payment;
 import com.vegetablemarket.entity.PaymentStatus;
@@ -134,10 +136,10 @@ public class RazorpayService {
 
         User user = findUser(email);
 
-        // Find the local payment by our own order relationship rather than trusting
-        // the browser-supplied Razorpay order ID as the source of truth.
-        Payment payment = paymentRepository.findByOrderId(request.getOrderId())
-                .orElseThrow(() -> new RuntimeException("Payment not found for order"));
+        // Locate the local payment using the Razorpay order ID that was created
+        // server-side. We still compare it explicitly below before verification.
+        Payment payment = paymentRepository.findByRazorpayOrderId(request.getRazorpayOrderId())
+                .orElseThrow(() -> new RuntimeException("Payment not found for Razorpay order"));
 
         Order order = payment.getOrder();
         validateOrderAccess(user, order);
@@ -147,7 +149,6 @@ public class RazorpayService {
             throw new RuntimeException("Razorpay order ID is missing for this payment");
         }
 
-        // The order ID returned by Checkout must match the server-side stored ID.
         if (!storedRazorpayOrderId.equals(request.getRazorpayOrderId())) {
             throw new RuntimeException("Razorpay order ID mismatch");
         }
@@ -159,8 +160,6 @@ public class RazorpayService {
             throw new RuntimeException("Payment is already completed");
         }
 
-        // Razorpay requires HMAC verification over the server-stored order ID and
-        // the payment ID returned by Checkout.
         if (!isValidSignature(storedRazorpayOrderId,
                 request.getRazorpayPaymentId(), request.getRazorpaySignature())) {
             payment.setStatus(PaymentStatus.FAILED);
@@ -172,6 +171,14 @@ public class RazorpayService {
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setTransactionId(request.getRazorpayPaymentId());
         payment.setUpdatedAt(LocalDateTime.now());
+
+        // A successful payment confirms every still-active item in the order.
+        // Seller-specific shipping/delivery status is then managed independently.
+        for (OrderItem item : order.getItems()) {
+            if (item.getStatus() == null || item.getStatus() == OrderItemStatus.PLACED) {
+                item.setStatus(OrderItemStatus.CONFIRMED);
+            }
+        }
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
 
