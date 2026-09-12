@@ -22,9 +22,22 @@ public class UserService {
     private JwtService jwtService;
 
     /**
-     * Register a new user
+     * Public registration always creates a CUSTOMER.
+     * Seller accounts must be created through a trusted/admin process.
      */
     public User registerUser(RegisterRequest request) {
+
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new RuntimeException("Email is required");
+        }
+
+        if (request.getPhone() == null || request.getPhone().isBlank()) {
+            throw new RuntimeException("Phone number is required");
+        }
+
+        if (request.getPassword() == null || request.getPassword().length() < 6) {
+            throw new RuntimeException("Password must contain at least 6 characters");
+        }
 
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already exists");
@@ -40,13 +53,15 @@ public class UserService {
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(request.getRole());
+
+        // Never trust the role supplied by an unauthenticated client.
+        user.setRole("CUSTOMER");
 
         return userRepository.save(user);
     }
 
     /**
-     * Login user and generate JWT token
+     * Login user and generate JWT token.
      */
     public LoginResponse login(LoginRequest request) {
 
@@ -64,5 +79,4 @@ public class UserService {
                 "Login Successful"
         );
     }
-
 }
