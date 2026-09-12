@@ -34,8 +34,13 @@ public class Product {
     @Column(nullable = false)
     private Long sellerId;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @Version
+    private Long version;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
-
 }
