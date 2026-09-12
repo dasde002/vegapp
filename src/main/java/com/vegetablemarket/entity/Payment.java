@@ -28,8 +28,11 @@ public class Payment {
     @Column(nullable = false)
     private String provider;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String transactionId;
+
+    @Column(unique = true)
+    private String razorpayOrderId;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
