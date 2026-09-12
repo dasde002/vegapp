@@ -12,10 +12,12 @@ import com.vegetablemarket.repository.OrderRepository;
 import com.vegetablemarket.repository.PaymentRepository;
 import com.vegetablemarket.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -82,13 +84,22 @@ public class RazorpayService {
                 "receipt", receipt
         );
 
-        Map<?, ?> response = restClient.post()
-                .uri("/orders")
-                .contentType(MediaType.APPLICATION_JSON)
-                .headers(headers -> headers.setBasicAuth(keyId, keySecret))
-                .body(request)
-                .retrieve()
-                .body(Map.class);
+        final Map<?, ?> response;
+        try {
+            response = restClient.post()
+                    .uri("/orders")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .headers(headers -> headers.setBasicAuth(keyId, keySecret))
+                    .body(request)
+                    .retrieve()
+                    .body(Map.class);
+        } catch (RestClientResponseException e) {
+            throw new RuntimeException("Razorpay order creation failed (HTTP "
+                    + e.getStatusCode().value() + "): " + e.getResponseBodyAsString());
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Unable to connect to Razorpay while creating the order: "
+                    + (e.getMessage() == null ? "unknown error" : e.getMessage()));
+        }
 
         if (response == null || response.get("id") == null) {
             throw new RuntimeException("Razorpay did not return an order ID");
@@ -104,7 +115,14 @@ public class RazorpayService {
         payment.setRazorpayOrderId(razorpayOrderId);
         payment.setCreatedAt(LocalDateTime.now());
         payment.setUpdatedAt(LocalDateTime.now());
-        paymentRepository.save(payment);
+
+        try {
+            paymentRepository.saveAndFlush(payment);
+        } catch (DataIntegrityViolationException e) {
+            throw new RuntimeException("Razorpay order was created (" + razorpayOrderId
+                    + "), but the payment could not be saved in the database. "
+                    + "Check the payments table constraints.");
+        }
 
         return new RazorpayOrderResponse(
                 payment.getId(), orderId, razorpayOrderId, amountInPaise, "INR", keyId, "created");
