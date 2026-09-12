@@ -149,14 +149,14 @@ public class OrderService {
         return seller;
     }
 
-    private void validateSellerStatusChange(OrderStatus currentStatus, OrderStatus newStatus) {
-        if (currentStatus == OrderStatus.CANCELLED) throw new RuntimeException("Cancelled orders cannot be updated");
-        if (currentStatus == OrderStatus.DELIVERED) throw new RuntimeException("Delivered orders cannot be updated");
+    private void validateSellerStatusChange(OrderItemStatus currentStatus, OrderStatus newStatus) {
+        if (currentStatus == OrderItemStatus.CANCELLED) throw new RuntimeException("Cancelled items cannot be updated");
+        if (currentStatus == OrderItemStatus.DELIVERED) throw new RuntimeException("Delivered items cannot be updated");
         if (newStatus == OrderStatus.PLACED) throw new RuntimeException("Seller cannot move an order back to PLACED");
         if (newStatus == OrderStatus.CANCELLED) throw new RuntimeException("Seller cannot cancel an order using this API");
-        if (currentStatus == OrderStatus.PLACED && newStatus != OrderStatus.CONFIRMED) throw new RuntimeException("PLACED orders can only be moved to CONFIRMED");
-        if (currentStatus == OrderStatus.CONFIRMED && newStatus != OrderStatus.SHIPPED) throw new RuntimeException("CONFIRMED orders can only be moved to SHIPPED");
-        if (currentStatus == OrderStatus.SHIPPED && newStatus != OrderStatus.DELIVERED) throw new RuntimeException("SHIPPED orders can only be moved to DELIVERED");
+        if (currentStatus == OrderItemStatus.PLACED && newStatus != OrderStatus.CONFIRMED) throw new RuntimeException("PLACED items can only be moved to CONFIRMED");
+        if (currentStatus == OrderItemStatus.CONFIRMED && newStatus != OrderStatus.SHIPPED) throw new RuntimeException("CONFIRMED items can only be moved to SHIPPED");
+        if (currentStatus == OrderItemStatus.SHIPPED && newStatus != OrderStatus.DELIVERED) throw new RuntimeException("SHIPPED items can only be moved to DELIVERED");
     }
 
     private OrderItemStatus getEffectiveItemStatus(OrderItem item) {
