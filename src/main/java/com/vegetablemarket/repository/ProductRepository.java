@@ -13,12 +13,15 @@ import java.util.List;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    List<Product> findBySellerId(Long sellerId);
+    List<Product> findBySellerIdAndActiveTrue(Long sellerId);
+
+    List<Product> findByActiveTrue();
 
     @Query("""
             SELECT p
             FROM Product p
-            WHERE (:keyword IS NULL OR :keyword = ''
+            WHERE p.active = true
+              AND (:keyword IS NULL OR :keyword = ''
                    OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
                    OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
               AND (:category IS NULL OR :category = ''
