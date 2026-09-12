@@ -4,6 +4,7 @@ import com.vegetablemarket.dto.InventoryUpdateRequest;
 import com.vegetablemarket.dto.ProductRequest;
 import com.vegetablemarket.dto.ProductResponse;
 import com.vegetablemarket.dto.ProductSearchResponse;
+import com.vegetablemarket.repository.ProductRepository;
 import com.vegetablemarket.service.ProductService;
 
 import jakarta.validation.Valid;
@@ -17,8 +18,8 @@ import java.util.List;
 @RequestMapping("/api/products")
 public class ProductController {
 
-    @Autowired
-    private ProductService productService;
+    @Autowired private ProductService productService;
+    @Autowired private ProductRepository productRepository;
 
     @PostMapping
     public ProductResponse addProduct(@Valid @RequestBody ProductRequest request, Authentication authentication) {
@@ -28,6 +29,11 @@ public class ProductController {
     @GetMapping
     public List<ProductResponse> getAllProducts() {
         return productService.getAllProducts();
+    }
+
+    @GetMapping("/categories")
+    public List<String> getCategories() {
+        return productRepository.findActiveCategories();
     }
 
     @GetMapping("/search")
@@ -55,18 +61,12 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ProductResponse updateProduct(
-            @PathVariable Long id,
-            @Valid @RequestBody ProductRequest request,
-            Authentication authentication) {
+    public ProductResponse updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest request, Authentication authentication) {
         return productService.updateProduct(id, request, authentication.getName());
     }
 
     @PutMapping("/{id}/inventory")
-    public ProductResponse updateInventory(
-            @PathVariable Long id,
-            @Valid @RequestBody InventoryUpdateRequest request,
-            Authentication authentication) {
+    public ProductResponse updateInventory(@PathVariable Long id, @Valid @RequestBody InventoryUpdateRequest request, Authentication authentication) {
         return productService.updateInventory(id, request.getQuantity(), authentication.getName());
     }
 
