@@ -27,4 +27,8 @@ public class OrderItem {
 
     @Column(nullable = false)
     private Double price;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private OrderItemStatus status;
 }
