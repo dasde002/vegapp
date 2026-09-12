@@ -27,8 +27,7 @@ public class ProductService {
 
     @Transactional
     public ProductResponse addProduct(ProductRequest request, String email) {
-        User seller = getUserByEmail(email);
-        if (!"SELLER".equalsIgnoreCase(seller.getRole())) throw new RuntimeException("Only sellers can add products");
+        User seller = getSeller(email);
         Product product = new Product();
         product.setName(request.getName().trim());
         product.setDescription(request.getDescription().trim());
@@ -66,25 +65,20 @@ public class ProductService {
     }
 
     public ProductResponse getProductById(Long id) {
-        Product product = productRepository.findById(id)
-                .filter(p -> Boolean.TRUE.equals(p.getActive()))
+        Product product = productRepository.findById(id).filter(p -> Boolean.TRUE.equals(p.getActive()))
                 .orElseThrow(() -> new RuntimeException("Product not found"));
         return toProductResponse(product);
     }
 
     public List<ProductResponse> getMyProducts(String email) {
-        User seller = getUserByEmail(email);
-        if (!"SELLER".equalsIgnoreCase(seller.getRole())) throw new RuntimeException("Only sellers can view their products");
+        User seller = getSeller(email);
         return productRepository.findBySellerIdAndActiveTrue(seller.getId()).stream().map(this::toProductResponse).collect(Collectors.toList());
     }
 
     @Transactional
     public ProductResponse updateProduct(Long id, ProductRequest request, String email) {
-        User seller = getUserByEmail(email);
-        if (!"SELLER".equalsIgnoreCase(seller.getRole())) throw new RuntimeException("Only sellers can update products");
-        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
-        if (!Boolean.TRUE.equals(product.getActive())) throw new RuntimeException("Product is no longer active");
-        if (!product.getSellerId().equals(seller.getId())) throw new RuntimeException("You are not authorized to update this product");
+        User seller = getSeller(email);
+        Product product = getOwnedProduct(id, seller.getId());
         product.setName(request.getName().trim());
         product.setDescription(request.getDescription().trim());
         product.setCategory(request.getCategory().trim());
@@ -96,21 +90,42 @@ public class ProductService {
     }
 
     @Transactional
+    public ProductResponse updateInventory(Long id, Integer quantity, String email) {
+        User seller = getSeller(email);
+        Product product = getOwnedProduct(id, seller.getId());
+        product.setStockQuantity(quantity);
+        product.setUpdatedAt(LocalDateTime.now());
+        return toProductResponse(productRepository.save(product));
+    }
+
+    @Transactional
     public void deleteProduct(Long id, String email) {
-        User seller = getUserByEmail(email);
-        if (!"SELLER".equalsIgnoreCase(seller.getRole())) throw new RuntimeException("Only sellers can delete products");
-        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
-        if (!product.getSellerId().equals(seller.getId())) throw new RuntimeException("You are not authorized to delete this product");
-        if (!Boolean.TRUE.equals(product.getActive())) throw new RuntimeException("Product is already deleted");
+        User seller = getSeller(email);
+        Product product = getOwnedProduct(id, seller.getId());
         product.setActive(false);
         product.setUpdatedAt(LocalDateTime.now());
         productRepository.save(product);
     }
 
+    private User getSeller(String email) {
+        User seller = getUserByEmail(email);
+        if (!"SELLER".equalsIgnoreCase(seller.getRole())) throw new RuntimeException("Only sellers can access this operation");
+        return seller;
+    }
+
+    private Product getOwnedProduct(Long id, Long sellerId) {
+        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        if (!Boolean.TRUE.equals(product.getActive())) throw new RuntimeException("Product is no longer active");
+        if (!sellerId.equals(product.getSellerId())) throw new RuntimeException("You are not authorized to update this product");
+        return product;
+    }
+
     private User getUserByEmail(String email) {
         return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
     }
+
     private String normalize(String value) { return value == null ? null : value.trim(); }
+
     private ProductResponse toProductResponse(Product product) {
         return new ProductResponse(product.getId(), product.getName(), product.getDescription(), product.getPrice(), product.getCategory(), product.getStockQuantity(), product.getImageUrl());
     }
