@@ -22,7 +22,6 @@ import java.util.List;
 
 @Service
 public class OrderService {
-
     @Autowired private UserRepository userRepository;
     @Autowired private AddressRepository addressRepository;
     @Autowired private CartItemRepository cartItemRepository;
@@ -31,28 +30,16 @@ public class OrderService {
 
     @Transactional
     public Order checkout(String email, Long addressId) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Address address = addressRepository.findById(addressId)
-                .orElseThrow(() -> new RuntimeException("Address not found"));
-        if (!address.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("You are not authorized to use this address");
-        }
-
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        Address address = addressRepository.findById(addressId).orElseThrow(() -> new RuntimeException("Address not found"));
+        if (!address.getUser().getId().equals(user.getId())) throw new RuntimeException("You are not authorized to use this address");
         List<CartItem> cartItems = cartItemRepository.findByUser(user);
         if (cartItems.isEmpty()) throw new RuntimeException("Cart is empty");
 
-        // Product has @Version, so concurrent checkout/update attempts cannot
-        // silently overwrite each other's stock changes.
         for (CartItem cartItem : cartItems) {
             Product product = cartItem.getProduct();
-            if (!product.isActive()) {
-                throw new RuntimeException("Product is no longer available: " + product.getName());
-            }
-            if (cartItem.getQuantity() > product.getStockQuantity()) {
-                throw new RuntimeException("Insufficient stock for product: " + product.getName());
-            }
+            if (!Boolean.TRUE.equals(product.getActive())) throw new RuntimeException("Product is no longer available: " + product.getName());
+            if (cartItem.getQuantity() > product.getStockQuantity()) throw new RuntimeException("Insufficient stock for product: " + product.getName());
         }
 
         Order order = new Order();
@@ -71,7 +58,6 @@ public class OrderService {
 
         List<OrderItem> orderItems = new ArrayList<>();
         double totalAmount = 0.0;
-
         for (CartItem cartItem : cartItems) {
             Product product = cartItem.getProduct();
             OrderItem orderItem = new OrderItem();
@@ -80,12 +66,10 @@ public class OrderService {
             orderItem.setQuantity(cartItem.getQuantity());
             orderItem.setPrice(product.getPrice());
             orderItems.add(orderItem);
-
             totalAmount += product.getPrice() * cartItem.getQuantity();
             product.setStockQuantity(product.getStockQuantity() - cartItem.getQuantity());
             productRepository.save(product);
         }
-
         order.setItems(orderItems);
         order.setTotalAmount(totalAmount);
         order = orderRepository.save(order);
@@ -94,41 +78,27 @@ public class OrderService {
     }
 
     public List<Order> getMyOrders(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
         return orderRepository.findByUser(user);
     }
 
     public Order getOrder(String email, Long orderId) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-        if (!order.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Unauthorized access to order");
-        }
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        if (!order.getUser().getId().equals(user.getId())) throw new RuntimeException("Unauthorized access to order");
         return order;
     }
 
     @Transactional
     public Order cancelOrder(String email, Long orderId) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-        if (!order.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Unauthorized access to order");
-        }
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new RuntimeException("Order is already cancelled");
-        }
-        if (order.getStatus() == OrderStatus.SHIPPED || order.getStatus() == OrderStatus.DELIVERED) {
-            throw new RuntimeException("Order cannot be cancelled at this stage");
-        }
-
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        if (!order.getUser().getId().equals(user.getId())) throw new RuntimeException("Unauthorized access to order");
+        if (order.getStatus() == OrderStatus.CANCELLED) throw new RuntimeException("Order is already cancelled");
+        if (order.getStatus() == OrderStatus.SHIPPED || order.getStatus() == OrderStatus.DELIVERED) throw new RuntimeException("Order cannot be cancelled at this stage");
         for (OrderItem orderItem : order.getItems()) {
             Product product = orderItem.getProduct();
-            if (product.isActive()) {
+            if (Boolean.TRUE.equals(product.getActive())) {
                 product.setStockQuantity(product.getStockQuantity() + orderItem.getQuantity());
                 productRepository.save(product);
             }
@@ -139,42 +109,30 @@ public class OrderService {
 
     public List<com.vegetablemarket.dto.SellerOrderResponse> getSellerOrders(String email) {
         User seller = getSeller(email);
-        return orderRepository.findOrdersBySellerId(seller.getId()).stream()
-                .map(order -> toSellerOrderResponse(order, seller.getId())).toList();
+        return orderRepository.findOrdersBySellerId(seller.getId()).stream().map(order -> toSellerOrderResponse(order, seller.getId())).toList();
     }
 
     public com.vegetablemarket.dto.SellerOrderResponse getSellerOrder(String email, Long orderId) {
         User seller = getSeller(email);
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-        if (order.getItems().stream().noneMatch(item -> item.getProduct().getSellerId().equals(seller.getId()))) {
-            throw new RuntimeException("You are not authorized to access this order");
-        }
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        if (order.getItems().stream().noneMatch(item -> item.getProduct().getSellerId().equals(seller.getId()))) throw new RuntimeException("You are not authorized to access this order");
         return toSellerOrderResponse(order, seller.getId());
     }
 
     @Transactional
     public com.vegetablemarket.dto.SellerOrderResponse updateSellerOrderStatus(String email, Long orderId, OrderStatus newStatus) {
         User seller = getSeller(email);
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-        if (order.getItems().stream().noneMatch(item -> item.getProduct().getSellerId().equals(seller.getId()))) {
-            throw new RuntimeException("You are not authorized to update this order");
-        }
-        if (order.getItems().stream().anyMatch(item -> !item.getProduct().getSellerId().equals(seller.getId()))) {
-            throw new RuntimeException("This order contains products from multiple sellers. Seller-specific status management is not available for this order yet.");
-        }
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        if (order.getItems().stream().noneMatch(item -> item.getProduct().getSellerId().equals(seller.getId()))) throw new RuntimeException("You are not authorized to update this order");
+        if (order.getItems().stream().anyMatch(item -> !item.getProduct().getSellerId().equals(seller.getId()))) throw new RuntimeException("This order contains products from multiple sellers. Seller-specific status management is not available for this order yet.");
         validateSellerStatusChange(order.getStatus(), newStatus);
         order.setStatus(newStatus);
         return toSellerOrderResponse(orderRepository.save(order), seller.getId());
     }
 
     private User getSeller(String email) {
-        User seller = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        if (!"SELLER".equalsIgnoreCase(seller.getRole())) {
-            throw new RuntimeException("Only sellers can access seller orders");
-        }
+        User seller = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        if (!"SELLER".equalsIgnoreCase(seller.getRole())) throw new RuntimeException("Only sellers can access seller orders");
         return seller;
     }
 
@@ -196,17 +154,12 @@ public class OrderService {
         response.setCustomerEmail(order.getUser().getEmail());
         response.setStatus(order.getStatus());
         response.setCreatedAt(order.getCreatedAt());
-
         List<com.vegetablemarket.dto.SellerOrderItemResponse> items = order.getItems().stream()
                 .filter(item -> item.getProduct().getSellerId().equals(sellerId))
                 .map(item -> {
                     com.vegetablemarket.dto.SellerOrderItemResponse r = new com.vegetablemarket.dto.SellerOrderItemResponse();
-                    r.setOrderItemId(item.getId());
-                    r.setProductId(item.getProduct().getId());
-                    r.setProductName(item.getProduct().getName());
-                    r.setQuantity(item.getQuantity());
-                    r.setPrice(item.getPrice());
-                    return r;
+                    r.setOrderItemId(item.getId()); r.setProductId(item.getProduct().getId()); r.setProductName(item.getProduct().getName());
+                    r.setQuantity(item.getQuantity()); r.setPrice(item.getPrice()); return r;
                 }).toList();
         response.setItems(items);
         response.setSellerOrderTotal(items.stream().mapToDouble(item -> item.getPrice() * item.getQuantity()).sum());
