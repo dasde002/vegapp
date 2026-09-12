@@ -34,8 +34,9 @@ public class Product {
     @Column(nullable = false)
     private Long sellerId;
 
-    @Column(nullable = false)
-    private boolean active = true;
+    // Nullable during the first schema-update deployment so existing rows
+    // can be initialized safely by ProductDataInitializer.
+    private Boolean active = true;
 
     @Version
     private Long version;
