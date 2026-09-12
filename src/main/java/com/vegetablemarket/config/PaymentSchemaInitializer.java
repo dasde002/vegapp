@@ -29,6 +29,11 @@ public class PaymentSchemaInitializer implements CommandLineRunner {
                 "ALTER TABLE payments ALTER COLUMN razorpay_order_id DROP NOT NULL"
         );
 
+        // Legacy/mock payment rows may not have a transaction ID.
+        jdbcTemplate.execute(
+                "ALTER TABLE payments ALTER COLUMN transaction_id DROP NOT NULL"
+        );
+
         // Allow multiple NULL values while enforcing uniqueness for real Razorpay orders.
         jdbcTemplate.execute(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ux_payments_razorpay_order_id "
