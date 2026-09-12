@@ -19,14 +19,16 @@ public class OrderController {
 
 
     // CHECKOUT
+    // Example: POST /api/orders?addressId=1
     @PostMapping
     public ResponseEntity<Order> checkout(
+            @RequestParam Long addressId,
             Authentication authentication) {
 
         String email = authentication.getName();
 
         return ResponseEntity.ok(
-                orderService.checkout(email)
+                orderService.checkout(email, addressId)
         );
     }
 
@@ -56,19 +58,19 @@ public class OrderController {
                 orderService.getOrder(email, orderId)
         );
     }
-    
+
 
     // CANCEL ORDER
-@PutMapping("/{orderId}/cancel")
-public ResponseEntity<Order> cancelOrder(
-        @PathVariable Long orderId,
-        Authentication authentication) {
+    @PutMapping("/{orderId}/cancel")
+    public ResponseEntity<Order> cancelOrder(
+            @PathVariable Long orderId,
+            Authentication authentication) {
 
-    String email = authentication.getName();
+        String email = authentication.getName();
 
-    return ResponseEntity.ok(
-            orderService.cancelOrder(email, orderId)
-    );
+        return ResponseEntity.ok(
+                orderService.cancelOrder(email, orderId)
+        );
     }
 
 }
