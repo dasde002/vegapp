@@ -1,9 +1,11 @@
 package com.vegetablemarket.controller;
 
+import com.vegetablemarket.dto.OrderStatusRequest;
 import com.vegetablemarket.dto.SellerOrderResponse;
 import com.vegetablemarket.entity.OrderStatus;
 import com.vegetablemarket.service.OrderService;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,54 +20,24 @@ public class SellerOrderController {
     @Autowired
     private OrderService orderService;
 
-
-    // GET ALL ORDERS CONTAINING SELLER PRODUCTS
     @GetMapping
-    public ResponseEntity<List<SellerOrderResponse>> getSellerOrders(
-            Authentication authentication) {
-
-        String email = authentication.getName();
-
-        return ResponseEntity.ok(
-                orderService.getSellerOrders(email)
-        );
+    public ResponseEntity<List<SellerOrderResponse>> getSellerOrders(Authentication authentication) {
+        return ResponseEntity.ok(orderService.getSellerOrders(authentication.getName()));
     }
 
-
-    // GET ONE SELLER ORDER
     @GetMapping("/{orderId}")
     public ResponseEntity<SellerOrderResponse> getSellerOrder(
             @PathVariable Long orderId,
             Authentication authentication) {
-
-        String email = authentication.getName();
-
-        return ResponseEntity.ok(
-                orderService.getSellerOrder(
-                        email,
-                        orderId
-                )
-        );
+        return ResponseEntity.ok(orderService.getSellerOrder(authentication.getName(), orderId));
     }
 
-
-    // UPDATE ORDER STATUS
     @PutMapping("/{orderId}/status")
     public ResponseEntity<SellerOrderResponse> updateOrderStatus(
             @PathVariable Long orderId,
-            @RequestParam OrderStatus status,
+            @Valid @RequestBody OrderStatusRequest request,
             Authentication authentication) {
-
-        String email = authentication.getName();
-
-        return ResponseEntity.ok(
-                orderService.updateSellerOrderStatus(
-                        email,
-                        orderId,
-                        status
-                )
-        );
+        return ResponseEntity.ok(orderService.updateSellerOrderStatus(
+                authentication.getName(), orderId, request.getStatus()));
     }
 }
-
-
