@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vegetable Market - Payment</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 520px; margin: 50px auto; padding: 20px; }
+        h1 { margin-bottom: 8px; }
+        label { display: block; margin-top: 16px; font-weight: 600; }
+        input { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 6px; }
+        button { width: 100%; padding: 12px; margin-top: 22px; cursor: pointer; }
+        #message { margin-top: 20px; padding: 12px; white-space: pre-wrap; }
+        .success { background: #e8f5e9; }
+        .error { background: #ffebee; }
+    </style>
+</head>
+<body>
+    <h1>Vegetable Market</h1>
+    <p>Razorpay Test Mode payment</p>
+
+    <label for="orderId">Order ID</label>
+    <input id="orderId" type="number" value="6" min="1">
+
+    <label for="token">JWT Token</label>
+    <input id="token" type="password" placeholder="Paste your customer JWT token">
+
+    <button id="payButton" onclick="startPayment()">Pay Now</button>
+
+    <div id="message"></div>
+
+    <script>
+        const message = document.getElementById('message');
+
+        function showMessage(text, success = false) {
+            message.textContent = text;
+            message.className = success ? 'success' : 'error';
+        }
+
+        async function startPayment() {
+            const orderId = document.getElementById('orderId').value;
+            const token = document.getElementById('token').value.trim();
+            const button = document.getElementById('payButton');
+
+            if (!orderId || !token) {
+                showMessage('Please enter the Order ID and JWT token.');
+                return;
+            }
+
+            button.disabled = true;
+            showMessage('Creating Razorpay order...');
+
+            try {
+                const response = await fetch(`/api/payments/orders/${orderId}/razorpay`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'Unable to create Razorpay order');
+                }
+
+                const options = {
+                    key: data.keyId,
+                    amount: data.amount,
+                    currency: data.currency,
+                    name: 'Vegetable Market',
+                    description: `Payment for Order #${data.orderId}`,
+                    order_id: data.razorpayOrderId,
+                    handler: async function (paymentResponse) {
+                        await verifyPayment(paymentResponse, token);
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            button.disabled = false;
+                            showMessage('Payment window closed. The order is still unpaid.');
+                        }
+                    },
+                    theme: {
+                        color: '#3399cc'
+                    }
+                };
+
+                const razorpay = new Razorpay(options);
+                razorpay.on('payment.failed', function (response) {
+                    button.disabled = false;
+                    showMessage(
+                        'Payment failed.\n' +
+                        'Code: ' + (response.error?.code || 'unknown') + '\n' +
+                        'Description: ' + (response.error?.description || 'Unknown error')
+                    );
+                });
+                razorpay.open();
+            } catch (error) {
+                button.disabled = false;
+                showMessage(error.message || 'Payment initialization failed.');
+            }
+        }
+
+        async function verifyPayment(paymentResponse, token) {
+            showMessage('Payment received. Verifying payment signature...');
+
+            try {
+                const response = await fetch('/api/payments/razorpay/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                        razorpayOrderId: paymentResponse.razorpay_order_id,
+                        razorpaySignature: paymentResponse.razorpay_signature
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'Payment verification failed');
+                }
+
+                showMessage(
+                    `Payment successful!\n\n` +
+                    `Payment ID: ${data.paymentId}\n` +
+                    `Order ID: ${data.orderId}\n` +
+                    `Status: ${data.status}\n` +
+                    `Transaction ID: ${data.transactionId || paymentResponse.razorpay_payment_id}`,
+                    true
+                );
+                document.getElementById('payButton').disabled = true;
+            } catch (error) {
+                document.getElementById('payButton').disabled = false;
+                showMessage('Payment was made, but verification failed.\n' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
