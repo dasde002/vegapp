@@ -1,11 +1,14 @@
 services:
 
   vegetable-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: vegetable-backend:1.0
     container_name: vegetable-backend
 
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
 
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -15,8 +18,22 @@ services:
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
     restart: unless-stopped
 
@@ -33,5 +50,11 @@ services:
     depends_on:
       vegetable-backend:
         condition: service_healthy
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
     restart: unless-stopped
