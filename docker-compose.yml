@@ -19,3 +19,19 @@ services:
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
 
     restart: unless-stopped
+
+  vegetable-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: vegapp-frontend:1.0
+    container_name: vegetable-frontend
+
+    ports:
+      - "80:80"
+
+    depends_on:
+      vegetable-backend:
+        condition: service_healthy
+
+    restart: unless-stopped
